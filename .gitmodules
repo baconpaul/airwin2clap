@@ -1,0 +1,9 @@
+[submodule "libs/clap"]
+	path = libs/clap
+	url = https://github.com/free-audio/clap
+[submodule "libs/clap-helpers"]
+	path = libs/clap-helpers
+	url = https://github.com/free-audio/clap-helpers
+[submodule "libs/airwindows"]
+	path = libs/airwindows
+	url = https://github.com/airwindows/airwindows
