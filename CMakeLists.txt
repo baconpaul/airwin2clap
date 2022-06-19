@@ -16,6 +16,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 
 
+option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" FALSE)
+
 # use asan as an option (currently mac only)
 option(USE_SANITIZER "Build and link with ASAN" FALSE)
 
@@ -32,7 +34,6 @@ endif()
 
 add_library(${PROJECT_NAME} MODULE
         src/claudio.cpp
-        src/claudio_configured.cpp
         )
 target_include_directories(${PROJECT_NAME} PRIVATE include ${CMAKE_BINARY_DIR}/individuals)
 target_link_libraries(${PROJECT_NAME} clap-core clap-helpers)
@@ -100,14 +101,13 @@ foreach(awt ${AW})
 endforeach()
 file(APPEND ${sumfn} "} return nullptr; } \n")
 
-file(APPEND ${sumfn} "AudioEffect *claudio_get_aeffInstance(audioMasterCallback c, const char* plugin_id)\n")
+file(APPEND ${sumfn} "std::pair<AudioEffect *, const clap_plugin_descriptor *> claudio_get_aeffInstance(audioMasterCallback c, const char* plugin_id)\n")
 file(APPEND ${sumfn} "{")
 set(CASEW 0)
 foreach(awt ${AW})
-
-    file(APPEND ${sumfn} "if (strcmp(plugin_id, \"unofficial.com.airwindows.${awt}\") == 0) return claudio_${awt}CreateEffectInstance(c);\n")
+    file(APPEND ${sumfn} "if (strcmp(plugin_id, \"unofficial.com.airwindows.${awt}\") == 0) return { claudio_${awt}CreateEffectInstance(c), &claudio_${awt}_desc};\n")
 endforeach()
-file(APPEND ${sumfn} "return nullptr; } \n")
+file(APPEND ${sumfn} "return {nullptr, nullptr}; } \n")
 
 
 if(APPLE)
