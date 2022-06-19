@@ -74,8 +74,9 @@ struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::Misbehaviour
     bool implementsAudioPorts() const noexcept override { return true; }
     uint32_t audioPortsCount(bool isInput) const noexcept override
     {
-        if (isInput) return underlyer->nin;
-        return underlyer->nout;
+        // So VST is channels not ports so
+        assert(underlyer->nin == 2 && underlyer->nout == 2);
+        return 1;
     }
     bool audioPortsInfo(uint32_t index, bool isInput,
                         clap_audio_port_info *info) const noexcept override
@@ -90,7 +91,52 @@ struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::Misbehaviour
 
     clap_process_status process(const clap_process *process) noexcept override
     {
-        return Plugin::process(process);
+        auto fc = process->frames_count;
+        auto ip = process->audio_inputs->data32;
+        auto op = process->audio_outputs->data32;
+        auto smp = 0U;
+
+        auto ev = process->in_events;
+        auto sz = ev->size(ev);
+
+        // This pointer is the sentinel to our next event which we advance once an event is processed
+
+        const clap_event_header_t *nextEvent{nullptr};
+        uint32_t nextEventIndex{0};
+        if (sz != 0)
+        {
+            nextEvent = ev->get(ev, nextEventIndex);
+        }
+
+        while (nextEvent && nextEvent->time < smp + fc)
+        {
+            if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
+            {
+                switch(nextEvent->type)
+                {
+                case CLAP_EVENT_PARAM_VALUE:
+                {
+                    auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
+                    underlyer->setParameter(pevt->param_id - paramOff, pevt->value);
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+
+            nextEventIndex++;
+            if (nextEventIndex >= sz)
+                nextEvent = nullptr;
+            else
+                nextEvent = ev->get(ev, nextEventIndex);
+        }
+
+        underlyer->processReplacing(ip, op, process->frames_count);
+
+
+        assert (!nextEvent);
+        return CLAP_PROCESS_CONTINUE;
     }
 };
 
