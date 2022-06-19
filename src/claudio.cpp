@@ -92,8 +92,7 @@ struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::Misbehaviour
     clap_process_status process(const clap_process *process) noexcept override
     {
         auto fc = process->frames_count;
-        auto ip = process->audio_inputs->data32;
-        auto op = process->audio_outputs->data32;
+        float *ip[2], *op[2];
         auto smp = 0U;
 
         auto ev = process->in_events;
@@ -108,32 +107,41 @@ struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::Misbehaviour
             nextEvent = ev->get(ev, nextEventIndex);
         }
 
-        while (nextEvent && nextEvent->time < smp + fc)
+        uint32_t basechunk = 32;
+        while (smp < fc)
         {
-            if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
+            uint32_t chunk = std::min(basechunk, fc-smp);
+            ip[0] = &process->audio_inputs->data32[0][smp];
+            ip[1] = &process->audio_inputs->data32[1][smp];
+            op[0] = &process->audio_outputs->data32[0][smp];
+            op[1] = &process->audio_outputs->data32[1][smp];
+            while (nextEvent && nextEvent->time < smp + chunk)
             {
-                switch(nextEvent->type)
+                if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
                 {
-                case CLAP_EVENT_PARAM_VALUE:
-                {
-                    auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
-                    underlyer->setParameter(pevt->param_id - paramOff, pevt->value);
-                    break;
+                    switch (nextEvent->type)
+                    {
+                    case CLAP_EVENT_PARAM_VALUE:
+                    {
+                        auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
+                        underlyer->setParameter(pevt->param_id - paramOff, pevt->value);
+                        break;
+                    }
+                    default:
+                        break;
+                    }
                 }
-                default:
-                    break;
-                }
+
+                nextEventIndex++;
+                if (nextEventIndex >= sz)
+                    nextEvent = nullptr;
+                else
+                    nextEvent = ev->get(ev, nextEventIndex);
             }
 
-            nextEventIndex++;
-            if (nextEventIndex >= sz)
-                nextEvent = nullptr;
-            else
-                nextEvent = ev->get(ev, nextEventIndex);
+            underlyer->processReplacing(ip, op, chunk);
+            smp += chunk;
         }
-
-        underlyer->processReplacing(ip, op, process->frames_count);
-
 
         assert (!nextEvent);
         return CLAP_PROCESS_CONTINUE;
