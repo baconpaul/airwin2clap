@@ -47,8 +47,9 @@ function (addAirwin airwin)
     add_library(${awt} STATIC ${aw_src}/${airwin}.cpp ${aw_src}/${airwin}Proc.cpp)
     target_include_directories(${awt} PRIVATE include)
     if (APPLE)
-        target_compile_options(${PROJECT_NAME} PRIVATE
-                -Werror -Wno-unused-value
+        target_compile_options(${awt} PRIVATE
+               -Wno-unused-value
+               -Wno-parentheses   # these ones look like actual bugs tbh
                 )
     endif()
 
@@ -77,7 +78,6 @@ foreach(awdir ${ALL_AIRWIN})
     string(REPLACE ${AIRWIN_DIR} "" AWT ${awdir})
     addAirwin(${AWT})
 endforeach()
-
 
 
 get_target_property(AWC ${PROJECT_NAME} AIRWIN_COUNT)

@@ -10,7 +10,7 @@ const char *@AIRWIN_NAME@_features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, nullpt
 clap_plugin_descriptor aw2c_@AIRWIN_NAME@_desc = {
     CLAP_VERSION,
     "unofficial.com.airwindows.@AIRWIN_NAME@", // change this change the cmake generatortoo
-    "Airwindows @AIRWIN_NAME@ (Unofficial)",
+    "AW @AIRWIN_NAME@ (Unofficial)",
     "Unsupported",
     "https://airwindows.com",
     "",

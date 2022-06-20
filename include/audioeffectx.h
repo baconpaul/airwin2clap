@@ -1,84 +1,22 @@
-//
-// Created by Paul Walker on 6/18/22.
-//
-
+/*
+ * The AIRWIN code #includes a file called 'audioeffectx.h' which is often shipped with
+ * another SDK and is not in the AIRWIN repo.
+ *
+ * We do not need that file nor its contents to port to CLAP, but we do need
+ * something we can include which provides the base class interface the airwindows use.
+ * And to avoid modifying the Airwindows code we want something with the same name so
+ * #include actually works.
+ *
+ * So create this file, but then simply include a subsequent file with our base class and typedef
+ * the audioeffectx classes to it.
+ */
 #ifndef CLAUDIO_EFFECT_X_AUDIOEFFECTX_H
 #define CLAUDIO_EFFECT_X_AUDIOEFFECTX_H
 
-#include <cstdint>
-#include <cstring>
-#include <string>
+#include "airwin-to-clap.h"
 
-struct clap_host;
-typedef const clap_host *audioMasterCallback;
-typedef int VstPlugCategory;
-typedef int32_t VstInt32;
-#define vst_strncpy strncpy
-
-static constexpr uint32_t kVstMaxProgNameLen = 32;
-static constexpr uint32_t kVstMaxParamStrLen = 64;
-static constexpr uint32_t kVstMaxProductStrLen = 64;
-static constexpr uint32_t kVstMaxVendorStrLen = 64;
-
-static constexpr uint32_t kPlugCategEffect = 1;
-
-inline void float2string(float f, char *c, uint32_t n) {
-    strncpy(c, std::to_string(f).c_str(), n);
-}
-
-inline void dB2string(float f, char *c, uint32_t n) {
-    strncpy(c, std::to_string(f).c_str(), n);
-}
-
-inline void int2string(int f, char *c, uint32_t n) {
-    strncpy(c, std::to_string(f).c_str(), n);
-}
-
-struct AudioEffect {
-    uint32_t numParams{0};
-    AudioEffect(audioMasterCallback audioMaster, uint32_t kNumPrograms, uint32_t kNumParameters) : numParams(kNumParameters){}
-
-    virtual ~AudioEffect() = default;
-
-
-    double sr{1};
-
-    void setSampleRate(double d) { sr = d; }
-    double getSampleRate() { return sr; }
-
-    int nin{0}, nout{0};
-    void setNumInputs(uint32_t kNumInputs) { nin = kNumInputs; }
-    void setNumOutputs(uint32_t kNumOutputs) { nout = kNumOutputs; }
-    void setUniqueID(uint32_t kUniqueId) {}
-
-    bool canProcessReplacing() { return false; }
-    bool canDoubleReplacing() { return false; }
-
-    void programsAreChunks(bool b) {}
-
-    virtual bool getEffectName(char *name) = 0;                       // The plug-in name
-    virtual VstPlugCategory getPlugCategory() = 0;                    // The general category for the plug-in
-    virtual bool
-    getProductString(char *text) = 0;                    // This is a unique plug-in string provided by Steinberg
-    virtual bool getVendorString(char *text) = 0;                    // Vendor info
-    virtual VstInt32 getVendorVersion() = 0;                         // Version number
-    virtual void processReplacing(float **inputs, float **outputs, VstInt32 sampleFrames) = 0;
-
-    virtual void processDoubleReplacing(double **inputs, double **outputs, VstInt32 sampleFrames) = 0;
-
-    virtual VstInt32 getChunk(void **data, bool isPreset) { return 0; };
-
-    virtual VstInt32 setChunk(void *data, VstInt32 byteSize, bool isPreset) { return 0; };
-
-    virtual float getParameter(VstInt32 index) { return 0.f; };                  // get the parameter value at the specified index
-    virtual void setParameter(VstInt32 index, float value) {};       // set the parameter at index to value
-    virtual void getParameterLabel(VstInt32 index, char *text) {};  // label for the parameter (eg dB)
-    virtual void getParameterName(VstInt32 index, char *text) {};    // name of the parameter
-    virtual void getParameterDisplay(VstInt32 index, char *text) {}; // text description of the current value
-    virtual VstInt32 canDo(char *text) = 0;
-};
-
-typedef AudioEffect AudioEffectX;
+typedef AirwinToClapPortBaseClass AudioEffect;
+typedef AirwinToClapPortBaseClass AudioEffectX;
 
 
 #endif //CLAUDIO_EFFECT_X_AUDIOEFFECTX_H
