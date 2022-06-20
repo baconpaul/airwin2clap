@@ -26,6 +26,14 @@ inline void float2string(float f, char *c, uint32_t n) {
     strncpy(c, std::to_string(f).c_str(), n);
 }
 
+inline void dB2string(float f, char *c, uint32_t n) {
+    strncpy(c, std::to_string(f).c_str(), n);
+}
+
+inline void int2string(int f, char *c, uint32_t n) {
+    strncpy(c, std::to_string(f).c_str(), n);
+}
+
 struct AudioEffect {
     uint32_t numParams{0};
     AudioEffect(audioMasterCallback audioMaster, uint32_t kNumPrograms, uint32_t kNumParameters) : numParams(kNumParameters){}
@@ -58,15 +66,15 @@ struct AudioEffect {
 
     virtual void processDoubleReplacing(double **inputs, double **outputs, VstInt32 sampleFrames) = 0;
 
-    virtual VstInt32 getChunk(void **data, bool isPreset) = 0;
+    virtual VstInt32 getChunk(void **data, bool isPreset) { return 0; };
 
-    virtual VstInt32 setChunk(void *data, VstInt32 byteSize, bool isPreset) = 0;
+    virtual VstInt32 setChunk(void *data, VstInt32 byteSize, bool isPreset) { return 0; };
 
-    virtual float getParameter(VstInt32 index) = 0;                  // get the parameter value at the specified index
-    virtual void setParameter(VstInt32 index, float value) = 0;       // set the parameter at index to value
-    virtual void getParameterLabel(VstInt32 index, char *text) = 0;  // label for the parameter (eg dB)
-    virtual void getParameterName(VstInt32 index, char *text) = 0;    // name of the parameter
-    virtual void getParameterDisplay(VstInt32 index, char *text) = 0; // text description of the current value
+    virtual float getParameter(VstInt32 index) { return 0.f; };                  // get the parameter value at the specified index
+    virtual void setParameter(VstInt32 index, float value) {};       // set the parameter at index to value
+    virtual void getParameterLabel(VstInt32 index, char *text) {};  // label for the parameter (eg dB)
+    virtual void getParameterName(VstInt32 index, char *text) {};    // name of the parameter
+    virtual void getParameterDisplay(VstInt32 index, char *text) {}; // text description of the current value
     virtual VstInt32 canDo(char *text) = 0;
 };
 

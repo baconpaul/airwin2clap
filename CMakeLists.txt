@@ -39,10 +39,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE include ${CMAKE_BINARY_DIR}/i
 target_link_libraries(${PROJECT_NAME} clap-core clap-helpers)
 set_property(TARGET ${PROJECT_NAME} PROPERTY AIRWIN_INCLUDES "")
 set_property(TARGET ${PROJECT_NAME} PROPERTY AIRWIN_COUNT 0)
+set(AIRWIN_DIR ${CMAKE_SOURCE_DIR}/libs/airwindows/plugins/MacVST/)
 
 function (addAirwin airwin)
     set(awt aw2c_${airwin})
-    set(aw_src libs/airwindows/plugins/MacVST/${airwin}/source)
+    set(aw_src ${AIRWIN_DIR}/${airwin}/source)
     add_library(${awt} STATIC ${aw_src}/${airwin}.cpp ${aw_src}/${airwin}Proc.cpp)
     target_include_directories(${awt} PRIVATE include)
     if (APPLE)
@@ -70,10 +71,13 @@ function (addAirwin airwin)
     set_property(TARGET ${PROJECT_NAME} PROPERTY AIRWIN_COUNT ${AWC})
 endfunction()
 
-addAirwin(Chamber)
-addAirwin(Galactic)
-addAirwin(ZLowpass)
-addAirwin(DeBess)
+file(GLOB ALL_AIRWIN "${AIRWIN_DIR}*")
+
+foreach(awdir ${ALL_AIRWIN})
+    string(REPLACE ${AIRWIN_DIR} "" AWT ${awdir})
+    addAirwin(${AWT})
+endforeach()
+
 
 
 get_target_property(AWC ${PROJECT_NAME} AIRWIN_COUNT)
