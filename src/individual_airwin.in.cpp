@@ -4,10 +4,10 @@
 
 // clang-format off
 #include "audioeffectx.h"
-#include "claudio_@AIRWIN_NAME@.h"
+#include "aw2c_@AIRWIN_NAME@.h"
 
 const char *@AIRWIN_NAME@_features[] = {CLAP_PLUGIN_FEATURE_AUDIO_EFFECT, nullptr};
-clap_plugin_descriptor claudio_@AIRWIN_NAME@_desc = {
+clap_plugin_descriptor aw2c_@AIRWIN_NAME@_desc = {
     CLAP_VERSION,
     "unofficial.com.airwindows.@AIRWIN_NAME@", // change this change the cmake generatortoo
     "Airwindows @AIRWIN_NAME@ (Unofficial)",

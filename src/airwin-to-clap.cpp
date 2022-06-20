@@ -9,23 +9,23 @@
 #include "clap/helpers/host-proxy.hh"
 #include "clap/helpers/host-proxy.hxx"
 
-#include "claudio_configured.hxx"
+#include "aw2c_configured.hxx"
 
 #include <iostream>
 #include <cassert>
 
-struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
+struct aw2cWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
                                                      clap::helpers::CheckingLevel::Maximal>
 {
     AudioEffect *underlyer{nullptr};
-    ClaudioWrapper(const clap_host *host, const clap_plugin_descriptor *desc, AudioEffect *effect)
+    aw2cWrapper(const clap_host *host, const clap_plugin_descriptor *desc, AudioEffect *effect)
         : clap::helpers::Plugin<clap::helpers::MisbehaviourHandler::Terminate,
                                 clap::helpers::CheckingLevel::Maximal>(desc, host),
                                 underlyer(effect)
     {
        assert(underlyer);
     }
-    ~ClaudioWrapper() = default;
+    ~aw2cWrapper() = default;
 
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
@@ -146,25 +146,60 @@ struct ClaudioWrapper : public clap::helpers::Plugin<clap::helpers::Misbehaviour
         assert (!nextEvent);
         return CLAP_PROCESS_CONTINUE;
     }
+
+    bool implementsState() const noexcept override { return true; }
+    bool stateSave(const clap_ostream *stream) noexcept override
+    {
+        uint8_t *data;
+        auto s  = underlyer->getChunk((void**)&data, false);
+
+        auto c = data;
+        while (s > 0)
+        {
+            auto r = stream->write(stream, c, s);
+            if (r < 0)
+                return false;
+            s -= r;
+            c += r;
+        }
+        free(data);
+
+        return true;
+    }
+    bool stateLoad(const clap_istream *stream) noexcept override
+    {
+        char buffer[4096 * 16];
+        char *bp = &(buffer[0]);
+        int64_t rd;
+        int total = 0;
+        while ((rd = stream->read(stream, bp, 256)) > 0)
+        {
+            total += rd;
+            bp += rd;
+            if (total > 4096*16)
+                return false;
+        }
+
+        underlyer->setChunk(buffer, total, false);
+        return true;
+    }
 };
 
 static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const clap_host *host,
                                              const char *plugin_id)
 {
-    auto [fx, desc] = claudio_get_aeffInstance(host, plugin_id);
-    std::cout << "FX = " << fx << " plugin_id = " << plugin_id << std::endl;
-
-    auto wr = new ClaudioWrapper(host, desc, fx);
+    auto [fx, desc] = aw2c_get_aeffInstance(host, plugin_id);
+    auto wr = new aw2cWrapper(host, desc, fx);
     return wr->clapPlugin();
 }
 
-const CLAP_EXPORT struct clap_plugin_factory claudio_factory = {
-    claudio_get_plugin_count,
-    claudio_get_plugin_descriptor,
+const CLAP_EXPORT struct clap_plugin_factory aw2c_factory = {
+    aw2c_get_plugin_count,
+    aw2c_get_plugin_descriptor,
     clap_create_plugin,
 };
 
-static const void *get_factory(const char *factory_id) { return &claudio_factory; }
+static const void *get_factory(const char *factory_id) { return &aw2c_factory; }
 
 // clap_init and clap_deinit are required to be fast, but we have nothing we need to do here
 bool clap_init(const char *p) { return true; }

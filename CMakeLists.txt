@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
 endif()
 
-project(claudio-effect-x VERSION 0.9.0 LANGUAGES C CXX)
+project(airwin-to-clap VERSION 0.9.0 LANGUAGES C CXX)
 
 
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -33,7 +33,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/individuals")
 endif()
 
 add_library(${PROJECT_NAME} MODULE
-        src/claudio.cpp
+        src/airwin-to-clap.cpp
         )
 target_include_directories(${PROJECT_NAME} PRIVATE include ${CMAKE_BINARY_DIR}/individuals)
 target_link_libraries(${PROJECT_NAME} clap-core clap-helpers)
@@ -41,7 +41,7 @@ set_property(TARGET ${PROJECT_NAME} PROPERTY AIRWIN_INCLUDES "")
 set_property(TARGET ${PROJECT_NAME} PROPERTY AIRWIN_COUNT 0)
 
 function (addAirwin airwin)
-    set(awt claudio_${airwin})
+    set(awt aw2c_${airwin})
     set(aw_src libs/airwindows/plugins/MacVST/${airwin}/source)
     add_library(${awt} STATIC ${aw_src}/${airwin}.cpp ${aw_src}/${airwin}Proc.cpp)
     target_include_directories(${awt} PRIVATE include)
@@ -53,8 +53,8 @@ function (addAirwin airwin)
 
     set(CREATE_FN "${awt}CreateEffectInstance")
     set(AIRWIN_NAME "${airwin}")
-    configure_file(src/individual_claudio.in.h individuals/${awt}.h)
-    configure_file(src/individual_claudio.in.cpp individuals/${awt}.cpp)
+    configure_file(src/individual_airwin.in.h individuals/${awt}.h)
+    configure_file(src/individual_airwin.in.cpp individuals/${awt}.cpp)
 
     target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/individuals/${awt}.cpp)
 
@@ -79,33 +79,33 @@ addAirwin(DeBess)
 get_target_property(AWC ${PROJECT_NAME} AIRWIN_COUNT)
 message(STATUS "Generating ${AWC} plugins" )
 
-set(sumfn "${CMAKE_BINARY_DIR}/individuals/claudio_configured.hxx")
+set(sumfn "${CMAKE_BINARY_DIR}/individuals/aw2c_configured.hxx")
 file(WRITE ${sumfn} "// machine generated. Include once\n")
 
 get_target_property(AW ${PROJECT_NAME} AIRWIN_INCLUDES)
 foreach(awt ${AW})
     message(STATUS "Airwindow: ${awt}")
-    file(APPEND ${sumfn} "#include \"claudio_${awt}.h\"\n")
+    file(APPEND ${sumfn} "#include \"aw2c_${awt}.h\"\n")
 endforeach()
 
-file(APPEND ${sumfn} "uint32_t claudio_get_plugin_count(const clap_plugin_factory *f) { return ${AWC}; }\n")
-file(APPEND ${sumfn} "const clap_plugin_descriptor *claudio_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)\n")
+file(APPEND ${sumfn} "uint32_t aw2c_get_plugin_count(const clap_plugin_factory *f) { return ${AWC}; }\n")
+file(APPEND ${sumfn} "const clap_plugin_descriptor *aw2c_get_plugin_descriptor(const clap_plugin_factory *f, uint32_t w)\n")
 file(APPEND ${sumfn} "{ switch(w) {\n")
 set(CASEW 0)
 foreach(awt ${AW})
 
     file(APPEND ${sumfn} "case ${CASEW}:\n")
-    file(APPEND ${sumfn} "   return &claudio_${awt}_desc;\n")
+    file(APPEND ${sumfn} "   return &aw2c_${awt}_desc;\n")
     file(APPEND ${sumfn} "   break;\n")
     math(EXPR CASEW "${CASEW} + 1")
 endforeach()
 file(APPEND ${sumfn} "} return nullptr; } \n")
 
-file(APPEND ${sumfn} "std::pair<AudioEffect *, const clap_plugin_descriptor *> claudio_get_aeffInstance(audioMasterCallback c, const char* plugin_id)\n")
+file(APPEND ${sumfn} "std::pair<AudioEffect *, const clap_plugin_descriptor *> aw2c_get_aeffInstance(audioMasterCallback c, const char* plugin_id)\n")
 file(APPEND ${sumfn} "{")
 set(CASEW 0)
 foreach(awt ${AW})
-    file(APPEND ${sumfn} "if (strcmp(plugin_id, \"unofficial.com.airwindows.${awt}\") == 0) return { claudio_${awt}CreateEffectInstance(c), &claudio_${awt}_desc};\n")
+    file(APPEND ${sumfn} "if (strcmp(plugin_id, \"unofficial.com.airwindows.${awt}\") == 0) return { aw2c_${awt}CreateEffectInstance(c), &aw2c_${awt}_desc};\n")
 endforeach()
 file(APPEND ${sumfn} "return {nullptr, nullptr}; } \n")
 
