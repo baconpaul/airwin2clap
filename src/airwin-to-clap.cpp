@@ -23,9 +23,11 @@ struct aw2cWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
                                 clap::helpers::CheckingLevel::Maximal>(desc, host),
                                 underlyer(effect)
     {
-       assert(underlyer);
+        assert(underlyer);
     }
-    ~aw2cWrapper() = default;
+    ~aw2cWrapper() {
+        delete underlyer;
+    }
 
     bool activate(double sampleRate, uint32_t minFrameCount,
                   uint32_t maxFrameCount) noexcept override
@@ -70,6 +72,30 @@ struct aw2cWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
         underlyer->getParameterDisplay(paramId - paramOff, display);
         return true;
     }
+    void paramsFlush(const clap_input_events *ev, const clap_output_events *) noexcept override
+    {
+        auto sz = ev->size(ev);
+
+        for (size_t i=0; i<sz; ++i)
+        {
+            auto *nextEvent = ev->get(ev, i);
+
+            if (nextEvent->space_id == CLAP_CORE_EVENT_SPACE_ID)
+            {
+                switch (nextEvent->type)
+                {
+                case CLAP_EVENT_PARAM_VALUE:
+                {
+                    auto pevt = reinterpret_cast<const clap_event_param_value *>(nextEvent);
+                    underlyer->setParameter(pevt->param_id - paramOff, pevt->value);
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
+    }
 
     bool implementsAudioPorts() const noexcept override { return true; }
     uint32_t audioPortsCount(bool isInput) const noexcept override
@@ -82,12 +108,14 @@ struct aw2cWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
                         clap_audio_port_info *info) const noexcept override
     {
         info->id = isInput ? 2112 : 90210;
+        info->in_place_pair = !isInput ? 2112 : 90210;
         strncpy(info->name, "main", sizeof(info->name));
         info->flags = CLAP_AUDIO_PORT_IS_MAIN;
         info->channel_count = 2;
         info->port_type = CLAP_PORT_STEREO;
         return true;
     }
+
 
     clap_process_status process(const clap_process *process) noexcept override
     {
@@ -152,18 +180,27 @@ struct aw2cWrapper : public clap::helpers::Plugin<clap::helpers::MisbehaviourHan
     {
         uint8_t *data;
         auto s  = underlyer->getChunk((void**)&data, false);
-
-        auto c = data;
-        while (s > 0)
+        if (s && data)
         {
-            auto r = stream->write(stream, c, s);
-            if (r < 0)
-                return false;
-            s -= r;
-            c += r;
+            auto c = data;
+            while (s > 0)
+            {
+                auto r = stream->write(stream, c, s);
+                if (r < 0)
+                    return false;
+                s -= r;
+                c += r;
+            }
+            free(data);
         }
-        free(data);
 
+        // But no state is fine when we have no params
+        if (!s && !data)
+        {
+            assert(paramsCount() == 0);
+            if (paramsCount() > 0)
+                return false;
+        }
         return true;
     }
     bool stateLoad(const clap_istream *stream) noexcept override
@@ -189,6 +226,9 @@ static const clap_plugin *clap_create_plugin(const clap_plugin_factory *f, const
                                              const char *plugin_id)
 {
     auto [fx, desc] = aw2c_get_aeffInstance(host, plugin_id);
+    if (!fx)
+        return nullptr;
+
     auto wr = new aw2cWrapper(host, desc, fx);
     return wr->clapPlugin();
 }
@@ -199,7 +239,11 @@ const CLAP_EXPORT struct clap_plugin_factory aw2c_factory = {
     clap_create_plugin,
 };
 
-static const void *get_factory(const char *factory_id) { return &aw2c_factory; }
+static const void *get_factory(const char *factory_id) {
+    if (strcmp(factory_id, CLAP_PLUGIN_FACTORY_ID) == 0)
+        return &aw2c_factory;
+    return 0;
+}
 
 // clap_init and clap_deinit are required to be fast, but we have nothing we need to do here
 bool clap_init(const char *p) { return true; }
