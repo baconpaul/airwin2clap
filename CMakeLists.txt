@@ -52,6 +52,9 @@ function (addAirwin airwin)
                -Wno-parentheses   # these ones look like actual bugs tbh
                 )
     endif()
+    if (MSVC)
+	target_compile_definitions(${awt} PRIVATE -D_USE_MATH_DEFINES)
+    endif()
 
     set(CREATE_FN "${awt}CreateEffectInstance")
     set(AIRWIN_NAME "${airwin}")
