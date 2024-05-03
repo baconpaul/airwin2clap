@@ -1,15 +1,5 @@
-# Unofficial Airwindows Support
+Heya this was a first try two years ago. We've since changed strategy
 
-Mostly just me trying it out
+If you want airwindows in your DSP in a consolidated way or want a clap, look at this repo:
 
-I gotta talk to chris...
-
-Anyway you know the drill
-
-```
-git clone https://github.com/baconpaul/airwin2clap.git
-cd airwin2clap
-git submodule update --init --recursive
-cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
+https://github.com/baconpaul/airwin2rack
